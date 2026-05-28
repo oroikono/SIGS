@@ -114,10 +114,9 @@ The Grammar-VAE checkpoint (`data/model.ckpt`) and the pre-computed cluster
 database (`data/clusters.pkl`) are required to run Stage I.
 See `data/DOWNLOAD.md` for download instructions.
 
-The cluster database contains ~23 000 latent vectors partitioned into six
-`MathClass` categories. The Grammar-VAE was trained on a dataset of ~50 000
-symbolic expressions generated from the CFG grammar (`data/expressions.h5`,
-required only for retraining).
+The cluster database contains 23 695 latent vectors partitioned into six
+`MathClass` categories, corresponding to the full training corpus of 23 695
+symbolic expressions (`data/expressions.h5`, required only for retraining).
 
 ## Quick Start
 
