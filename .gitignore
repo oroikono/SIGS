@@ -9,11 +9,6 @@ build/
 *.log
 *.bak
 
-# Large data files — track via Git LFS
-*.h5
-*.hdf5
-*.ckpt
-*.pkl
 
 # IDE
 .vscode/
