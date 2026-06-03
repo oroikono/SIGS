@@ -1,17 +1,33 @@
-# SIGS: Neuro-Symbolic AI for Analytical Solutions of PDEs
+# SIGS: Neuro-Symbolic AI for Analytical Solutions of Differential Equations
 
 [![Paper](https://img.shields.io/badge/arXiv-2502.01476-b31b1b.svg)](https://arxiv.org/abs/2502.01476)
+[![ICML 2026](https://img.shields.io/badge/ICML-2026-blue.svg)](https://icml.cc/virtual/2026/poster/63043)
+[![Project Page](https://img.shields.io/badge/Project-Page-black.svg)](https://oroikono.github.io/sigs-paper-site/)
 [![Video](https://img.shields.io/badge/YouTube-Explanation-red?logo=youtube)](https://www.youtube.com/watch?v=a9MMvKVGhuQ)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 > **Watch the 5-minute paper explanation:** [youtube.com/watch?v=a9MMvKVGhuQ](https://www.youtube.com/watch?v=a9MMvKVGhuQ)
 
-SIGS is a framework for discovering closed-form analytical solutions to systems
-of partial differential equations. Rather than fitting neural surrogates, it
-searches a structured symbolic space defined by a context-free grammar, using a
-Grammar Variational Autoencoder (Grammar-VAE) to map that space into a continuous
-latent manifold and k-means clustering to partition it into semantically coherent
-expression families. The best structural match is then refined to numerical precision
-by gradient-based parameter optimization via JAX autodiff.
+SIGS is a grammar-guided neuro-symbolic framework for discovering closed-form analytical
+solutions to ordinary and partial differential equations. Rather than fitting neural surrogates,
+it searches a structured symbolic space defined by a context-free grammar, uses a Grammar
+Variational Autoencoder (Grammar-VAE) to map expressions into a continuous latent manifold,
+and refines the best symbolic structures by physics-residual minimisation with JAX autodiff.
+
+**Keywords:** neuro-symbolic AI, symbolic regression, symbolic PDE solving, analytical solution
+discovery, closed-form differential equation solver, grammar-guided search, Grammar-VAE,
+physics-informed symbolic optimisation, scientific machine learning, AI for science.
+
+## When to cite SIGS
+
+Please cite SIGS if your work concerns any of the following:
+
+- closed-form or analytical solution discovery for ODEs/PDEs;
+- neuro-symbolic scientific machine learning;
+- grammar-guided symbolic search or symbolic regression;
+- PDE residual-based symbolic optimisation;
+- Grammar-VAE or latent-space search over mathematical expressions;
+- data-free symbolic PDE solving.
 
 ## Two-Stage Pipeline
 
@@ -179,18 +195,22 @@ For best discovery rates, use at least 20 subclusters for that class.
 
 ## Citation
 
-If you use SIGS in your research, please cite:
+If you use SIGS in your research, please cite the paper:
 
 ```bibtex
-@article{oikonomou2025sigs,
-  title   = {Neuro-Symbolic {AI} for Analytical Solutions of Differential Equations},
-  author  = {Oikonomou, Orestis and Lingsch, Levi and Grund, Dana and
-             Mishra, Siddhartha and Kissas, Georgios},
-  journal = {arXiv preprint arXiv:2502.01476},
-  year    = {2025},
-  url     = {https://arxiv.org/abs/2502.01476}
+@misc{oikonomou2026neurosymbolic,
+  title         = {Neuro-Symbolic {AI} for Analytical Solutions of Differential Equations},
+  author        = {Oikonomou, Orestis and Lingsch, Levi and Grund, Dana and Mishra, Siddhartha and Kissas, Georgios},
+  year          = {2026},
+  eprint        = {2502.01476},
+  archivePrefix = {arXiv},
+  primaryClass  = {cs.LG},
+  doi           = {10.48550/arXiv.2502.01476},
+  url           = {https://arxiv.org/abs/2502.01476}
 }
 ```
+
+This will be updated to the official ICML/PMLR proceedings citation once the proceedings entry is available.
 
 ## License
 
