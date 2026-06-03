@@ -1,11 +1,11 @@
 [build-system]
 requires = ["setuptools>=68", "wheel"]
-build-backend = "setuptools.backends.legacy:build"
+build-backend = "setuptools.build_meta"
 
 [project]
 name = "sigs"
 version = "0.1.0"
-description = "Neuro-Symbolic AI for Analytical Solutions of PDEs"
+description = "Neuro-Symbolic AI for Analytical Solutions of Differential Equations"
 readme = "README.md"
 license = { file = "LICENSE" }
 requires-python = ">=3.10"
@@ -16,7 +16,15 @@ authors = [
   { name = "Siddhartha Mishra" },
   { name = "Georgios Kissas" },
 ]
-keywords = ["symbolic regression", "PDEs", "grammar VAE", "neuro-symbolic"]
+keywords = [
+  "neuro-symbolic AI",
+  "symbolic regression",
+  "partial differential equations",
+  "analytical solutions",
+  "closed-form solutions",
+  "grammar VAE",
+  "scientific machine learning",
+]
 classifiers = [
   "Programming Language :: Python :: 3",
   "License :: OSI Approved :: MIT License",
@@ -47,5 +55,5 @@ where = ["src"]
 
 [project.urls]
 Homepage = "https://github.com/oroikono/SIGS"
-Paper    = "https://arxiv.org/abs/2502.01476"
-Video    = "https://www.youtube.com/watch?v=a9MMvKVGhuQ"
+Paper = "https://arxiv.org/abs/2502.01476"
+Video = "https://www.youtube.com/watch?v=a9MMvKVGhuQ"
