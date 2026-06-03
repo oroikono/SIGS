@@ -2,6 +2,7 @@
 
 [![Paper](https://img.shields.io/badge/arXiv-2502.01476-b31b1b.svg)](https://arxiv.org/abs/2502.01476)
 [![ICML 2026](https://img.shields.io/badge/ICML-2026-blue.svg)](https://icml.cc/virtual/2026/poster/63043)
+[![Smoke test](https://github.com/oroikono/SIGS/actions/workflows/smoke.yml/badge.svg)](https://github.com/oroikono/SIGS/actions/workflows/smoke.yml)
 [![Project Page](https://img.shields.io/badge/Project-Page-black.svg)](https://oroikono.github.io/sigs-paper-site/)
 [![Video](https://img.shields.io/badge/YouTube-Explanation-red?logo=youtube)](https://www.youtube.com/watch?v=a9MMvKVGhuQ)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
@@ -27,16 +28,22 @@ git clone https://github.com/oroikono/SIGS.git
 cd SIGS
 python -m venv .venv
 source .venv/bin/activate
-pip install -e .
+pip install -e ".[dev]"
 python scripts/smoke_test.py
+pytest -q
 ```
 
-The smoke test is data-free. It verifies the grammar, expression classification,
-and a simple symbolic residual calculation. Full Stage I discovery additionally
-requires the Git LFS model and cluster files described in [`data/DOWNLOAD.md`](data/DOWNLOAD.md).
+The smoke test and pytest suite are data-free. They verify the grammar,
+expression classification, and a simple symbolic residual calculation. Full
+Stage I discovery additionally requires the Git LFS model and cluster files
+described in [`data/DOWNLOAD.md`](data/DOWNLOAD.md).
 
-For a paper-level walkthrough, read [`docs/reviewer_guide.md`](docs/reviewer_guide.md)
-and [`docs/algorithm.md`](docs/algorithm.md).
+For paper-level context and reproduction guidance, read:
+
+- [`docs/reviewer_guide.md`](docs/reviewer_guide.md) — short paper and repository walkthrough;
+- [`docs/algorithm.md`](docs/algorithm.md) — detailed two-stage algorithm description;
+- [`docs/reproducibility.md`](docs/reproducibility.md) — what can be checked quickly and what requires paper-scale artifacts;
+- [`docs/comparison_protocol.md`](docs/comparison_protocol.md) — recommended metrics for fair comparison.
 
 ## When to cite SIGS
 
@@ -91,6 +98,14 @@ Python 3.10+ is recommended.
 pip install -e .
 ```
 
+For development and CI-style checks:
+
+```bash
+pip install -e ".[dev]"
+python scripts/smoke_test.py
+pytest -q
+```
+
 Alternatively, use the provided conda environment:
 
 ```bash
@@ -129,6 +144,8 @@ SIGS/
 │   ├── run_euler_four_fields.py  Euler runner (four independent fields)
 │   ├── run_euler_same_series.py  Euler runner (shared Fourier series)
 │   └── plot_euler.py           Reproduce compressible Euler paper figures
+├── tests/
+│   └── test_smoke.py           Data-free pytest checks for the symbolic core
 ├── notebooks/
 │   ├── demo_pdes.ipynb         Burgers, diffusion, KdV, damped wave, baselines (Table 1)
 │   └── demo_shallow_water.ipynb  2-D shallow water main result (§4.1)
@@ -140,6 +157,8 @@ SIGS/
 │   └── DOWNLOAD.md             Instructions for model checkpoint and cluster database
 └── docs/
     ├── algorithm.md            Detailed two-stage algorithm description
+    ├── comparison_protocol.md  Recommended metrics and reporting for fair comparisons
+    ├── reproducibility.md      Quick checks and paper-level reproduction guidance
     └── reviewer_guide.md       Short guide for reviewers and interview discussions
 ```
 
