@@ -18,6 +18,26 @@ and refines the best symbolic structures by physics-residual minimisation with J
 discovery, closed-form differential equation solver, grammar-guided search, Grammar-VAE,
 physics-informed symbolic optimisation, scientific machine learning, AI for science.
 
+## Quick technical review
+
+For a fast review of the repository:
+
+```bash
+git clone https://github.com/oroikono/SIGS.git
+cd SIGS
+python -m venv .venv
+source .venv/bin/activate
+pip install -e .
+python scripts/smoke_test.py
+```
+
+The smoke test is data-free. It verifies the grammar, expression classification,
+and a simple symbolic residual calculation. Full Stage I discovery additionally
+requires the Git LFS model and cluster files described in [`data/DOWNLOAD.md`](data/DOWNLOAD.md).
+
+For a paper-level walkthrough, read [`docs/reviewer_guide.md`](docs/reviewer_guide.md)
+and [`docs/algorithm.md`](docs/algorithm.md).
+
 ## When to cite SIGS
 
 Please cite SIGS if your work concerns any of the following:
@@ -48,7 +68,8 @@ Please cite SIGS if your work concerns any of the following:
 - The highest-ranked structural form from Stage I is accepted as a symbolic ansatz;
   its numeric coefficients are treated as free parameters.
 - Exact PDE residuals are computed via JAX automatic differentiation (no finite differences).
-- All parameters are optimized simultaneously with Adam (Optax) for up to 5 000 iterations.
+- All parameters are optimized simultaneously with Adam (Optax); the shallow-water
+  refinement script runs for 5 000 iterations by default.
 
 ## Validated PDE Systems
 
@@ -62,28 +83,24 @@ Please cite SIGS if your work concerns any of the following:
 | 2-D Damped Wave | [-5, 5]² × [0, 2] | u |
 | 2-D Poisson (Gaussian source) | [0, 1]² | u |
 
-## Requirements
+## Installation
 
-- Python 3.10+
-- PyTorch >= 2.0
-- JAX / Jaxlib >= 0.4.20
-- Optax >= 0.1.7
-- symengine >= 0.11.0
-- sympy >= 1.12
-- scikit-learn >= 1.2
-- nltk >= 3.8
-- numpy, scipy, h5py, pyyaml, tqdm, matplotlib
+Python 3.10+ is recommended.
 
 ```bash
-pip install -r requirements.txt
+pip install -e .
 ```
 
-Or use the provided conda environment:
+Alternatively, use the provided conda environment:
 
 ```bash
 conda env create -f environment.yml
 conda activate sigs
+python scripts/smoke_test.py
 ```
+
+Core dependencies include PyTorch, JAX, Optax, SymPy/SymEngine, scikit-learn,
+NLTK, NumPy/SciPy, h5py, PyYAML, tqdm, and Matplotlib.
 
 ## Repository Structure
 
@@ -105,6 +122,7 @@ SIGS/
 │   ├── shallow_water.py        2-D shallow water manufactured solution
 │   └── compressible_euler.py   2-D steady compressible Euler manufactured solution
 ├── scripts/
+│   ├── smoke_test.py           Lightweight data-free installation check
 │   ├── discover.py             Stage I: sample and rank candidates (shallow water)
 │   ├── optimize.py             Stage II: JAX parameter refinement
 │   ├── euler_search.py         Stage I+II: compressible Euler search
@@ -121,14 +139,15 @@ SIGS/
 ├── data/
 │   └── DOWNLOAD.md             Instructions for model checkpoint and cluster database
 └── docs/
-    └── algorithm.md            Detailed two-stage algorithm description
+    ├── algorithm.md            Detailed two-stage algorithm description
+    └── reviewer_guide.md       Short guide for reviewers and interview discussions
 ```
 
 ## Data and Pre-trained Models
 
 The Grammar-VAE checkpoint (`data/model.ckpt`) and the pre-computed cluster
 database (`data/clusters.pkl`) are required to run Stage I.
-See `data/DOWNLOAD.md` for download instructions.
+See [`data/DOWNLOAD.md`](data/DOWNLOAD.md) for Git LFS instructions.
 
 The cluster database contains 23 695 latent vectors partitioned into six
 `MathClass` categories, corresponding to the full training corpus of 23 695
@@ -136,17 +155,17 @@ symbolic expressions (`data/expressions.h5`, required only for retraining).
 
 ## Quick Start
 
-```python
-import sys
-sys.path.insert(0, "src")
+After installing the package and downloading the LFS files, sample candidate
+expressions from the latent cluster database:
 
+```python
 import torch
 from sigs.sampler import FlexibleVectorSampler
 from sigs.utils import MathClass, ModelUtils
 
 # Load pre-trained model
 config = ModelUtils.load_config("configs/config.yaml")
-model  = ModelUtils.load_checkpoint("data/model.ckpt", config).eval()
+model = ModelUtils.load_checkpoint("data/model.ckpt", config).eval()
 
 # Load cluster database and instantiate sampler
 sampler = FlexibleVectorSampler(
