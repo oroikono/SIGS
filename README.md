@@ -94,8 +94,20 @@ Please cite SIGS if your work concerns any of the following:
 
 Python 3.10+ is recommended.
 
+Install the native grammar-VAE and symbolic core:
+
 ```bash
 pip install -e .
+```
+
+Install only the capabilities you plan to use:
+
+```bash
+pip install -e ".[search]"       # latent clustering and Stage I search
+pip install -e ".[train]"        # Lightning training
+pip install -e ".[optimize]"     # JAX/Optax Stage II refinement
+pip install -e ".[huggingface]"  # Transformers, Datasets, Accelerate, and Hub
+pip install -e ".[plot]"         # plotting utilities
 ```
 
 For development and CI-style checks:
@@ -114,8 +126,62 @@ conda activate sigs
 python scripts/smoke_test.py
 ```
 
-Core dependencies include PyTorch, JAX, Optax, SymPy/SymEngine, scikit-learn,
-NLTK, NumPy/SciPy, h5py, PyYAML, tqdm, and Matplotlib.
+The base package keeps the native PyTorch grammar-VAE and symbolic grammar
+available without forcing users to install JAX, Lightning, plotting, and the
+paper-scale search stack.
+
+## Hugging Face Transformers and Hub
+
+SIGS provides an optional Transformers adapter around the native Grammar-VAE.
+It is a grammar model—not a text language model—so the adapter preserves its
+one-hot grammar-production inputs while adding standard configuration, typed
+outputs, safe weight serialization, and Hub workflows.
+
+```python
+import torch
+
+from sigs.huggingface import SIGSConfig, SIGSModel
+
+config = SIGSConfig()
+model = SIGSModel(config)
+
+# [batch, grammar productions, sequence length]
+production_sequences = torch.randn(2, config.vocab_size, config.sequence_length)
+output = model(production_sequences)
+print(output.logits.shape)
+
+model.save_pretrained("sigs-grammar-vae")
+restored = SIGSModel.from_pretrained("sigs-grammar-vae")
+```
+
+The ICML checkpoint can be converted once and then pushed to the Hub:
+
+```bash
+python examples/export_to_huggingface.py \
+  --checkpoint data/model.ckpt \
+  --config configs/config.yaml \
+  --output-dir exported/sigs-grammar-vae \
+  --repo-id oroikono/sigs-icml-2026
+```
+
+See [`docs/huggingface.md`](docs/huggingface.md) for conversion, `AutoModel`,
+Datasets, Accelerate training, Hub publishing, model-card, and input-contract
+details.
+
+The original HDF5 corpus can also be exposed as deterministic Hugging Face
+Dataset splits and used in a distributed `Accelerate` training loop:
+
+```bash
+python examples/export_dataset_to_huggingface.py \
+  --data data/expressions.h5 \
+  --output-dir exported/sigs-corpus \
+  --repo-id oroikono/sigs-symbolic-pde-corpus
+
+accelerate launch examples/train_with_accelerate.py \
+  --data data/expressions.h5 \
+  --config configs/config.yaml \
+  --output-dir exported/sigs-grammar-vae
+```
 
 ## Repository Structure
 
@@ -124,6 +190,8 @@ SIGS/
 ├── src/sigs/               Core library
 │   ├── grammar.py          Context-free grammar definition
 │   ├── model.py            GrammarVAE (encoder + decoder)
+│   ├── huggingface.py      Optional Transformers/Hub adapter
+│   ├── hf_data.py          Optional Datasets bridge
 │   ├── encoder.py          1-D convolutional encoder
 │   ├── decoder.py          GRU decoder
 │   ├── sampler.py          FlexibleVectorSampler (Stage I search)

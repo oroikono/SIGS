@@ -21,13 +21,9 @@ import yaml
 import symengine as se
 import sympy as sp
 from torch.utils.data import DataLoader, TensorDataset
-from sklearn.cluster import KMeans
 
-# Import your existing modules
 from sigs.grammar import GCFG, S, get_mask
 from sigs.stack import Stack
-from sigs.model import GrammarVAE
-from sigs.training import GrammarVAEModel
 
 
 # =============================================================================
@@ -270,6 +266,8 @@ class ModelUtils:
     @staticmethod
     def load_checkpoint(checkpoint_path: str, config: dict):
         """Load model from PyTorch Lightning checkpoint for inference."""
+        from sigs.training import GrammarVAEModel
+
         print("Loading model checkpoint for inference...")
         model = GrammarVAEModel.load_from_checkpoint(checkpoint_path, config=config)
         model.eval()
@@ -553,6 +551,8 @@ class ClusteringUtils:
     @staticmethod
     def create_subclusters(vectors, expressions, n_clusters=5, random_state=42):
         """Create subclusters using k-means."""
+        from sklearn.cluster import KMeans
+
         vectors = np.array(vectors)
         
         kmeans = KMeans(n_clusters=n_clusters, random_state=random_state)
