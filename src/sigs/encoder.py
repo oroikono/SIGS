@@ -1,8 +1,7 @@
+from typing import List, Tuple
 
 import torch
 import torch.nn as nn
-from typing import List, Tuple
-from torch.nn.utils.parametrizations import spectral_norm
 
 
 class Encoder(nn.Module):
@@ -36,14 +35,12 @@ class Encoder(nn.Module):
         # Conv stack: Conv1d (SN, bias=False) -> LayerNorm([C,L]) -> ELU -> optional Dropout
         self.convs = nn.ModuleList()
         for i, (c_out, k) in enumerate(zip(conv_sizes, kernel_sizes)):
-
-            
             c_in = input_dim if i == 0 else conv_sizes[i - 1]
             layer_length = self.layer_lengths[i]
 
             conv = nn.Conv1d(c_in, c_out, k, bias=False)
             norm = nn.LayerNorm([c_out, layer_length]) if use_batch_norm else nn.Identity()
-            act  = nn.ELU()
+            act = nn.ELU()
             drop = nn.Dropout(p=dropout) if dropout and dropout > 0 else nn.Identity()
 
             self.convs.append(nn.Sequential(conv, norm, act, drop))
@@ -60,7 +57,7 @@ class Encoder(nn.Module):
         # Latent heads (SN), no bias
         # self.mu     = spectral_norm(nn.Linear(hidden_dim, z_dim, bias=False))
         # self.logvar = spectral_norm(nn.Linear(hidden_dim, z_dim, bias=False))
-        self.mu     = nn.Linear(hidden_dim, z_dim, bias=False)
+        self.mu = nn.Linear(hidden_dim, z_dim, bias=False)
         self.logvar = nn.Linear(hidden_dim, z_dim, bias=False)
 
     def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
@@ -71,6 +68,6 @@ class Encoder(nn.Module):
         for block in self.convs:
             x = block(x)  # keeps shape [B, C_i, L_i] consistent with LayerNorm
 
-        x = x.view(x.size(0), -1)  # flatten to [B, C_last * L_last]
+        x = x.reshape(x.size(0), -1)  # flatten to [B, C_last * L_last]
         h = self.linear(x)
         return self.mu(h), self.logvar(h)

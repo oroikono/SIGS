@@ -1,209 +1,199 @@
+"""Native PyTorch implementation of the SIGS grammar variational autoencoder."""
 
+from __future__ import annotations
+
+from typing import List, Optional, Tuple
 
 import torch
-import torch.nn as nn
-from torch.autograd import Variable
-from torch.distributions import Normal, Categorical
-from typing import Tuple, Optional, List
 from nltk import Nonterminal
-from sigs.encoder import Encoder
+from torch import nn
+
 from sigs.decoder import Decoder
-from sigs.stack import Stack
+from sigs.encoder import Encoder
 from sigs.grammar import GCFG, S, get_mask
-import sys
+from sigs.stack import Stack
+
 
 class GrammarVAE(nn.Module):
-    """Grammar Variational Autoencoder with complete VAE operations"""
+    """Grammar variational autoencoder used by SIGS.
+
+    The module follows normal PyTorch device semantics: callers move the model
+    and tensors with :meth:`torch.nn.Module.to`. ``forward`` never guesses a
+    device or silently copies its inputs.
+
+    Parameters
+    ----------
+    config:
+        Native SIGS configuration dictionary. The model architecture is read
+        from ``config["model"]`` and sampling defaults from ``config["training"]``.
+    """
+
     def __init__(self, config: dict):
         super().__init__()
-        # Extract configurations
-        enc_config = config['model']['encoder']
-        dec_config = config['model']['decoder']
-        shared_config = config['model']['shared']
-        
-        # Initialize encoder
+        enc_config = config["model"]["encoder"]
+        dec_config = config["model"]["decoder"]
+        shared_config = config["model"]["shared"]
+
         self.encoder = Encoder(
-            input_dim=shared_config['output_size'],
-            hidden_dim=enc_config['hidden_size'],
-            z_dim=shared_config['z_dim'],
-            max_length=shared_config['max_length'],
-            conv_sizes=enc_config['conv_sizes'],
-            kernel_sizes=enc_config['kernel_sizes'],
-            use_batch_norm=enc_config['use_batch_norm']
+            input_dim=shared_config["output_size"],
+            hidden_dim=enc_config["hidden_size"],
+            z_dim=shared_config["z_dim"],
+            max_length=shared_config["max_length"],
+            conv_sizes=enc_config["conv_sizes"],
+            kernel_sizes=enc_config["kernel_sizes"],
+            use_batch_norm=enc_config["use_batch_norm"],
+            dropout=enc_config.get("dropout", 0.0),
         )
-        
-        # Initialize decoder
         self.decoder = Decoder(
-            latent_rep_size=shared_config['z_dim'],
-            hidden_size=dec_config['hidden_size'],
-            output_size=shared_config['output_size'],
-            max_length=shared_config['max_length'],
-            rnn_type=dec_config['rnn_type'],
-            num_layers=dec_config['num_layers']
+            latent_rep_size=shared_config["z_dim"],
+            hidden_size=dec_config["hidden_size"],
+            output_size=shared_config["output_size"],
+            max_length=shared_config["max_length"],
+            rnn_type=dec_config["rnn_type"],
+            num_layers=dec_config["num_layers"],
+            dropout=dec_config.get("dropout", 0.0),
+            mode=dec_config.get("mode", "positional"),
         )
-        
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        self.max_length = shared_config['max_length']
-        self.tightness = config['training']['tightness']
-        
 
-        
-    def sample(self, mu: torch.Tensor, logvar: torch.Tensor, num_samples: int = 10) -> torch.Tensor:
+        self.max_length = int(shared_config["max_length"])
+        self.tightness = float(config["training"].get("tightness", 1.0))
+        self.decoder_samples = int(config["training"].get("decoder_samples", 1))
+        if self.decoder_samples < 1:
+            raise ValueError("training.decoder_samples must be at least 1")
+
+    @property
+    def device(self) -> torch.device:
+        """Return the device holding the model parameters."""
+
+        return next(self.parameters()).device
+
+    def sample(
+        self,
+        mu: torch.Tensor,
+        logvar: torch.Tensor,
+        num_samples: Optional[int] = None,
+        *,
+        generator: Optional[torch.Generator] = None,
+    ) -> torch.Tensor:
+        """Sample latent vectors with the reparameterization trick.
+
+        Returns a tensor shaped ``[batch, samples, latent_dim]``.
         """
-        Reparameterization trick with multiple samples
-        """
+
+        if mu.shape != logvar.shape or mu.ndim != 2:
+            raise ValueError("mu and logvar must have identical [batch, latent_dim] shapes")
+        count = self.decoder_samples if num_samples is None else int(num_samples)
+        if count < 1:
+            raise ValueError("num_samples must be at least 1")
+
         batch_size, latent_dim = mu.shape
+        mean = mu.unsqueeze(1)
+        std = (0.5 * logvar).exp().unsqueeze(1)
+        eps = torch.randn(
+            batch_size,
+            count,
+            latent_dim,
+            device=mu.device,
+            dtype=mu.dtype,
+            generator=generator,
+        )
+        return mean + eps * std * self.tightness
 
+    @staticmethod
+    def kl_divergence(mu: torch.Tensor, logvar: torch.Tensor) -> torch.Tensor:
+        """Return the batch-mean KL divergence from a unit Gaussian."""
 
-        # Expand mu and compute std = exp(0.5·logvar)
-        mu     = mu.unsqueeze(1)                       # → (B,1,D)
-        std    = (0.5 * logvar).exp().unsqueeze(1)     # → (B,1,D)
-        # Sample epsilon
-        eps    = torch.randn(batch_size, num_samples, latent_dim, device=mu.device)
-        # Reparameterization
-        z      = mu + eps * std * self.tightness
-        return z
+        if mu.shape != logvar.shape:
+            raise ValueError("mu and logvar must have identical shapes")
+        per_dimension = 0.5 * (mu.square() + logvar.exp() - 1.0 - logvar)
+        return per_dimension.mean(dim=1).mean()
 
+    def forward(
+        self,
+        x: torch.Tensor,
+        targets: Optional[torch.Tensor] = None,
+        *,
+        num_samples: Optional[int] = None,
+        generator: Optional[torch.Generator] = None,
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        """Encode production sequences and decode sampled latent vectors.
 
-    
-    def kl_divergence(self, mu, logvar):
-        # Print intermediate values
-        per_dim_kl = 0.5 * (mu.pow(2) + logvar.exp() - 1 - logvar)
-        # print(f"Per-dim KL shape: {per_dim_kl.shape}, mean: {per_dim_kl.mean().item()}")
-        kl_sum = per_dim_kl.sum(dim=1).mean().item()
-        kl_mean = per_dim_kl.mean(dim=1).mean().item()
-        # print(f"KL sum: {kl_sum}, KL mean: {kl_mean}, ratio: {kl_sum/kl_mean if kl_mean > 0 else 'inf'}")
-        
-        # Your actual implementation
-        kld = 0.5 * (mu.pow(2) + logvar.exp() - 1 - logvar).mean(dim=1)
-        return kld.mean()
-
-
-    def forward(self, x: torch.Tensor, targets: Optional[torch.Tensor] = None) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        ``targets`` remains accepted for backward compatibility with the original
+        research scripts; loss computation is intentionally owned by the trainer.
         """
-        Complete forward pass through the VAE
-        """
-        # Ensure input is on correct device
-        x = x.to(self.device)
-        
-        # Encode
+
+        del targets
+        if x.device != self.device:
+            raise RuntimeError(
+                f"input is on {x.device}, but SIGS is on {self.device}; "
+                "move them to the same device before calling the model"
+            )
         mu, logvar = self.encoder(x)
-        
-        # Sample latent vector
-        z = self.sample(mu, logvar)
-        
-        # Decode
-        logits = self.decoder(z)
-        
-        return logits, mu, logvar
+        z = self.sample(mu, logvar, num_samples, generator=generator)
+        return self.decoder(z), mu, logvar
 
-    def generate(self, z: torch.Tensor, sample: bool = False) -> List:
-        torch.manual_seed(42)
-        try:
-            # print("Entering generate...")
-            sys.stdout.flush()
-            # print(f"Input z shape: {z.shape}")
-            sys.stdout.flush()
-            # Log the process ID for debugging
-            import os
-            # print(f"Process ID: {os.getpid()} at decoder call.")
-            sys.stdout.flush()
-            stack = Stack(grammar=GCFG, start_symbol=S)
-            # print(f"Initial stack initialized with contents: {stack}")
-            # print(f"Initial stack: {stack.contents()}")
-            sys.stdout.flush()
-            # print("Before decoder forward pass...")
-            sys.stdout.flush()
-            
-            try:
-                # print("Calling decoder...")
-                sys.stdout.flush()
-                # print(f"Devices: z on {z.device}, decoder on {self.device}")
-                assert z.device == self.device, f"Mismatch: z on {z.device}, decoder on {self.device}"
-                # print(f"decoder: {self.decoder}")
-                sys.stdout.flush()
-                logits = self.decoder(z).squeeze()
-                # print("Decoder call successful.")
-                sys.stdout.flush()
-            except Exception as e:
-                print(f"Decoder failed with exception: {e}")
-                import traceback
-                traceback.print_exc()  # Print full traceback for debugging
-                sys.stdout.flush()
-                raise
+    def generate(
+        self,
+        z: torch.Tensor,
+        *,
+        sample: bool = False,
+        seed: Optional[int] = None,
+    ) -> List:
+        """Decode one latent vector into a grammar-production sequence.
 
-            # print(f"Logits shape: {logits.shape}")
-            sys.stdout.flush()
-            
-            rules = []
-            t = 0
+        ``seed`` controls a local generator and does not alter the global RNG.
+        """
 
-            while stack.nonempty and t < self.max_length:
-                # print(f"Step {t}, stack: {stack.contents()}")
-                alpha = stack.pop()
-                # print(f"Popped symbol: {alpha}")
-                sys.stdout.flush()
-                mask = get_mask(alpha, stack.grammar, as_variable=True).to(z.device)
-                # print(f"Mask: {mask}")
-                sys.stdout.flush()
+        if z.ndim == 1:
+            z = z.unsqueeze(0).unsqueeze(0)
+        elif z.ndim == 2:
+            z = z.unsqueeze(1)
+        if z.ndim != 3 or z.shape[:2] != (1, 1):
+            raise ValueError("generate expects exactly one latent vector")
+        if z.device != self.device:
+            raise RuntimeError(f"latent vector is on {z.device}, but SIGS is on {self.device}")
 
-                probs = mask * logits[t].exp()
-                probs = probs / probs.sum()
-                # print(f"Probabilities: {probs}")
-                sys.stdout.flush()
+        logits = self.decoder(z)[0, 0]
+        stack = Stack(grammar=GCFG, start_symbol=S)
+        rules = []
+        generator = None
+        if seed is not None:
+            generator = torch.Generator(device=z.device).manual_seed(seed)
 
-                if sample:
-                    m = Categorical(probs)
-                    i = m.sample()
-                else:
-                    _, i = probs.max(-1)
-                # print(f"Selected rule index: {i}")
-                sys.stdout.flush()
+        for step in range(self.max_length):
+            if not stack.nonempty:
+                break
+            symbol = stack.pop()
+            mask = get_mask(symbol, stack.grammar, as_variable=True).to(
+                device=z.device, dtype=torch.bool
+            )
+            if not torch.any(mask):
+                raise RuntimeError(f"grammar has no admissible production for {symbol}")
+            masked_logits = logits[step].masked_fill(~mask, float("-inf"))
+            if sample:
+                probabilities = torch.softmax(masked_logits, dim=-1)
+                index = torch.multinomial(probabilities, 1, generator=generator).item()
+            else:
+                index = int(masked_logits.argmax())
 
-                rule = stack.grammar.productions()[i.item()]
-                rules.append(rule)
-                # print(f"Selected rule: {rule}")
-                sys.stdout.flush()
+            rule = stack.grammar.productions()[index]
+            rules.append(rule)
+            for child in reversed(rule.rhs()):
+                if isinstance(child, Nonterminal):
+                    stack.push(child)
 
-                for symbol in reversed(rule.rhs()):
-                    if isinstance(symbol, Nonterminal):
-                        stack.push(symbol)
-                t += 1
-
-            # print("Exiting generate.")
-            sys.stdout.flush()
-            return rules
-        except Exception as e:
-            print(f"Error gen: {e}")
-            sys.stdout.flush()
-            return None
+        if stack.nonempty:
+            raise RuntimeError(
+                f"generation reached max_length={self.max_length} before completing the tree"
+            )
+        return rules
 
     def encode(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
-        """
-        Encode input to latent space
-        """
-        x = x.to(self.device)
+        """Encode production sequences into Gaussian parameters."""
+
         return self.encoder(x)
 
     def decode(self, z: torch.Tensor) -> torch.Tensor:
-        """
-        Decode latent vector to logits
-        """
+        """Decode latent vectors into production logits."""
+
         return self.decoder(z)
-
-    def to(self, device):
-        """
-        Ensure proper device movement and sanity‐check our internal pointer.
-        """
-        # Let the base class move all parameters/buffers first
-        module = super().to(device)
-        # Now update and verify our internal device attribute
-        module.device = device
-
-        # Sanity check: pick one parameter and assert it’s on the same device
-        example_param = next(module.parameters())
-        assert example_param.device == device, (
-            f"Device mismatch: internal={device}, param={example_param.device}"
-        )
-
-        return module

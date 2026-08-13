@@ -1,13 +1,13 @@
+"""Decoder used by the SIGS grammar variational autoencoder."""
+
+from __future__ import annotations
+
 import torch
-import torch.nn as nn
-from typing import Optional
-from torch.nn.utils.parametrizations import spectral_norm
+from torch import nn
 
 
 class Decoder(nn.Module):
-    """
-    Decoder for Grammar VAE with configurable modes: 'positional' (simpler) or 'autoregressive'.
-    """
+    """Decode latent vectors into logits over grammar productions."""
 
     def __init__(
         self,
@@ -21,68 +21,50 @@ class Decoder(nn.Module):
         mode: str = "positional",
     ):
         super().__init__()
-        self.mode = mode
-        self.max_length = max_length
-        self.hidden_size = hidden_size
-        self.output_size = output_size
-        self.num_layers = num_layers
-        self.linear_in = nn.Linear(latent_rep_size, hidden_size, bias=False)
+        if mode != "positional":
+            raise ValueError("only the checkpoint-compatible 'positional' decoder is implemented")
+        if num_layers < 1:
+            raise ValueError("num_layers must be at least 1")
 
+        self.mode = mode
+        self.max_length = int(max_length)
+        self.hidden_size = int(hidden_size)
+        self.output_size = int(output_size)
+        self.num_layers = int(num_layers)
+        self.linear_in = nn.Linear(latent_rep_size, hidden_size, bias=False)
         self.elu = nn.ELU()
 
-        # RNN layer (GRU or RNN)
-        if rnn_type.lower() == "gru":
-            self.rnn = nn.GRU(
-                hidden_size,
-                hidden_size,
-                num_layers=num_layers,
-                batch_first=True,
-                dropout=dropout,
-            )
-        elif rnn_type.lower() == "rnn":
-            self.rnn = nn.RNN(
-                hidden_size,
-                hidden_size,
-                num_layers=num_layers,
-                batch_first=True,
-                dropout=dropout,
-            )
+        recurrent_dropout = float(dropout) if num_layers > 1 else 0.0
+        rnn_kind = rnn_type.lower()
+        if rnn_kind == "gru":
+            rnn_class = nn.GRU
+        elif rnn_kind == "rnn":
+            rnn_class = nn.RNN
         else:
-            raise ValueError(f"Unsupported RNN type: {rnn_type}. Use 'gru' or 'rnn'.")
-
-        
+            raise ValueError(f"unsupported rnn_type={rnn_type!r}; use 'gru' or 'rnn'")
+        self.rnn = rnn_class(
+            hidden_size,
+            hidden_size,
+            num_layers=num_layers,
+            batch_first=True,
+            dropout=recurrent_dropout,
+        )
         self.time_distributed_dense = nn.Linear(hidden_size, output_size, bias=False)
 
-        # Configure mode-specific components
-        if self.mode == "autoregressive":
-            self.embedding = nn.Embedding(output_size, hidden_size)
-         
     def forward(self, z: torch.Tensor) -> torch.Tensor:
-        """
-        Forward pass of the decoder.
-        Args:
-            z: shape (batch_size, num_samples, latent_dim)
-        Returns:
-            logits: shape (batch_size, num_samples, max_length, output_size)
-        """
+        """Return logits shaped ``[batch, samples, length, productions]``."""
+
+        if z.ndim == 2:
+            z = z.unsqueeze(1)
+        if z.ndim != 3:
+            raise ValueError(
+                "z must have shape [batch, latent_dim] or [batch, samples, latent_dim]"
+            )
 
         batch_size, num_samples, latent_dim = z.shape
-
-        # Reshape z to process all samples
-        z_flat = z.view(-1, latent_dim)  # (batch_size * num_samples, latent_dim)
-
-        if self.mode == "positional":
-            # h = self.relu(self.linear_in(z_flat))
-            h = self.elu(self.linear_in(z_flat))
-            h = h.unsqueeze(1).repeat(1, self.max_length, 1)
-            h_out, _ = self.rnn(h)
-            # h_out = self.relu(h_out)
-            h_out = self.elu(h_out)
-            logits = self.time_distributed_dense(
-                h_out
-            )  # (batch_size * num_samples, max_length, output_size)
-
-            # Reshape back to include sample dimension
-            logits = logits.view(batch_size, num_samples, self.max_length, -1)
-
-        return logits
+        z_flat = z.reshape(batch_size * num_samples, latent_dim)
+        hidden = self.elu(self.linear_in(z_flat))
+        hidden = hidden.unsqueeze(1).expand(-1, self.max_length, -1)
+        hidden, _ = self.rnn(hidden)
+        logits = self.time_distributed_dense(self.elu(hidden))
+        return logits.reshape(batch_size, num_samples, self.max_length, self.output_size)
