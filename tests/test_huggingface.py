@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import pytest
 import torch
 from transformers import AutoModel
 
@@ -70,3 +71,14 @@ def test_convert_lightning_checkpoint(tmp_path, tiny_native_config):
 
     for key, value in native.state_dict().items():
         assert torch.equal(value, converted.grammar_vae.state_dict()[key])
+
+
+def test_convert_lightning_checkpoint_rejects_git_lfs_pointer(tmp_path, tiny_native_config):
+    checkpoint = tmp_path / "model.ckpt"
+    checkpoint.write_text(
+        "version https://git-lfs.github.com/spec/v1\noid sha256:0123456789abcdef\nsize 73537427\n"
+    )
+    config = SIGSConfig.from_native_config(tiny_native_config)
+
+    with pytest.raises(ValueError, match="Git LFS pointer"):
+        SIGSModel.from_lightning_checkpoint(checkpoint, config)

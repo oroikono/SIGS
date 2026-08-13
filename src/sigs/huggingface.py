@@ -221,6 +221,15 @@ class SIGSModel(PreTrainedModel):
     ) -> "SIGSModel":
         """Convert the paper's Lightning checkpoint to a Transformers model."""
 
+        checkpoint = Path(checkpoint)
+        with checkpoint.open("rb") as handle:
+            header = handle.read(128)
+        if header.startswith(b"version https://git-lfs.github.com/spec/v1"):
+            raise ValueError(
+                f"{checkpoint} is a Git LFS pointer, not the checkpoint data; "
+                "install Git LFS and run 'git lfs pull --include=data/model.ckpt'"
+            )
+
         try:
             payload = torch.load(checkpoint, map_location=map_location, weights_only=True)
         except TypeError:  # PyTorch < 2.0 compatibility
