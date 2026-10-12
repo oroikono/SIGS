@@ -17,7 +17,7 @@ repository-code: "https://github.com/oroikono/SIGS"
 url: "https://github.com/oroikono/SIGS"
 license: MIT
 preferred-citation:
-  type: article
+  type: conference-paper
   title: "Neuro-Symbolic AI for Analytical Solutions of Differential Equations"
   authors:
     - family-names: Oikonomou
@@ -31,4 +31,11 @@ preferred-citation:
     - family-names: Kissas
       given-names: Georgios
   year: 2026
-  doi: 10.48550/arXiv.2502.01476
+  collection-title: "Proceedings of the 43rd International Conference on Machine Learning"
+  collection-type: proceedings
+  volume: "306"
+  start: "94420"
+  end: "94451"
+  publisher:
+    name: PMLR
+  url: "https://proceedings.mlr.press/v306/oikonomou26a.html"

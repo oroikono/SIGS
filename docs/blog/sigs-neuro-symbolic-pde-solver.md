@@ -36,7 +36,8 @@ SIGS is most relevant if your work concerns closed-form or analytical solution d
 
 ## Links
 
-- Paper: https://arxiv.org/abs/2502.01476
+- Published paper: https://proceedings.mlr.press/v306/oikonomou26a.html
+- arXiv preprint: https://arxiv.org/abs/2502.01476
 - ICML 2026 poster: https://icml.cc/virtual/2026/poster/63043
 - Code: https://github.com/oroikono/SIGS
 - Project page: https://oroikono.github.io/sigs-paper-site/
@@ -45,14 +46,18 @@ SIGS is most relevant if your work concerns closed-form or analytical solution d
 ## Citation
 
 ```bibtex
-@misc{oikonomou2026neurosymbolic,
-  title         = {Neuro-Symbolic {AI} for Analytical Solutions of Differential Equations},
-  author        = {Oikonomou, Orestis and Lingsch, Levi and Grund, Dana and Mishra, Siddhartha and Kissas, Georgios},
-  year          = {2026},
-  eprint        = {2502.01476},
-  archivePrefix = {arXiv},
-  primaryClass  = {cs.LG},
-  doi           = {10.48550/arXiv.2502.01476},
-  url           = {https://arxiv.org/abs/2502.01476}
+@InProceedings{pmlr-v306-oikonomou26a,
+  title =   {Neuro-Symbolic {AI} for Analytical Solutions of Differential Equations},
+  author =       {Oikonomou, Orestis and Lingsch, Levi and Grund, Dana and Mishra, Siddhartha and Kissas, Georgios},
+  booktitle =   {Proceedings of the 43rd International Conference on Machine Learning},
+  pages =   {94420--94451},
+  year =   {2026},
+  editor =   {Zhang, Tong and Dudik, Miroslav and Jaggi, Martin and Agarwal, Alekh and Li, Sharon and Schuurmans, Dale and Zhu, Jerry and Berkenkamp, Felix and Dong, Hanze and Bietti, Alberto},
+  volume =   {306},
+  series =   {Proceedings of Machine Learning Research},
+  month =   {06--11 Jul},
+  publisher =    {PMLR},
+  pdf =   {https://raw.githubusercontent.com/mlresearch/v306/main/assets/oikonomou26a/oikonomou26a.pdf},
+  url =   {https://proceedings.mlr.press/v306/oikonomou26a.html}
 }
 ```
