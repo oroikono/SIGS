@@ -1,6 +1,6 @@
 cff-version: 1.2.0
-title: "Neuro-Symbolic AI for Analytical Solutions of Differential Equations"
-message: "If you use SIGS, please cite the associated paper."
+title: "SIGS: Neuro-Symbolic AI for Analytical Solutions of Differential Equations"
+message: "If you use SIGS or build on the method, please cite the published ICML paper below."
 type: software
 authors:
   - family-names: Oikonomou
@@ -14,8 +14,19 @@ authors:
   - family-names: Kissas
     given-names: Georgios
 repository-code: "https://github.com/oroikono/SIGS"
-url: "https://github.com/oroikono/SIGS"
+url: "https://oroikono.github.io/sigs-paper-site/"
 license: MIT
+abstract: >-
+  SIGS searches for closed-form differential-equation solutions using grammar-guided
+  symbolic representations and physics-based optimization. Candidate search uses a
+  specified grammar and Ansatz, with structure selection followed by coefficient refinement.
+keywords:
+  - neuro-symbolic AI
+  - differential equations
+  - closed-form solutions
+  - symbolic regression
+  - grammar-guided search
+  - scientific machine learning
 preferred-citation:
   type: conference-paper
   title: "Neuro-Symbolic AI for Analytical Solutions of Differential Equations"

@@ -9,15 +9,13 @@
 
 > **Watch the 5-minute paper explanation:** [youtube.com/watch?v=a9MMvKVGhuQ](https://www.youtube.com/watch?v=a9MMvKVGhuQ)
 
-SIGS is a grammar-guided neuro-symbolic framework for discovering closed-form analytical
-solutions to ordinary and partial differential equations. Rather than fitting neural surrogates,
-it searches a structured symbolic space defined by a context-free grammar, uses a Grammar
-Variational Autoencoder (Grammar-VAE) to map expressions into a continuous latent manifold,
-and refines the best symbolic structures by physics-residual minimisation with JAX autodiff.
+SIGS searches for closed-form solutions to differential equations using a context-free grammar, a learned latent representation of symbolic expressions, and physics-based optimization. For each problem, it selects a symbolic structure and refines its coefficients against the equation residual and prescribed initial and boundary conditions.
 
-**Keywords:** neuro-symbolic AI, symbolic regression, symbolic PDE solving, analytical solution
-discovery, closed-form differential equation solver, grammar-guided search, Grammar-VAE,
-physics-informed symbolic optimisation, scientific machine learning, AI for science.
+This is the code repository for **“Neuro-Symbolic AI for Analytical Solutions of Differential Equations”** by Orestis Oikonomou, Levi Lingsch, Dana Grund, Siddhartha Mishra, and Georgios Kissas, published at **ICML 2026**.
+
+[Published paper](https://proceedings.mlr.press/v306/oikonomou26a.html) · [arXiv](https://arxiv.org/abs/2502.01476) · [Project page](https://oroikono.github.io/sigs-paper-site/) · [Citation](#citation)
+
+The search depends on the chosen grammar and user-specified Ansatz. A small numerical residual alone does not establish an exact solution.
 
 ## Quick technical review
 
